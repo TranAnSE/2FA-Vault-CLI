@@ -1,0 +1,219 @@
+{
+  "_provenance": "Captured in chromium via 2FA-Vault/fixture-gen/serve (real argon2-browser UMD + wasm, AES-GCM per resources/js/services/crypto.js). See fixture-gen/serve/runner.js. Regenerate: serve fixture-gen/serve statically, run capture.mjs.",
+  "captured_at": "2026-10-08T20:51:58.108Z",
+  "user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/147.0.7727.15 Safari/537.36",
+  "argon2_raw": [
+    {
+      "password": "correct horse battery staple",
+      "saltB64": "AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8=",
+      "hashHex": "6ed12d7d594a6ae56c7ad1725982ae0d41317bd2b239dd1e0916d913d4da0757"
+    },
+    {
+      "password": "Tr0ub4dor&3",
+      "saltB64": "AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8=",
+      "hashHex": "51eb02ee31be8299541cdb0fe81b567f3df2232257b8412b350de2db15acbd13"
+    },
+    {
+      "password": "correct horse battery staple",
+      "saltB64": "paWlpaWlpaWlpaWlpaWlpaWlpaWlpaWlpaWlpaWlpaU=",
+      "hashHex": "959b5439267d7f5d2108ab5afed207298352a6e831cfeda733e8ef36a8b22881"
+    },
+    {
+      "password": "Tr0ub4dor&3",
+      "saltB64": "paWlpaWlpaWlpaWlpaWlpaWlpaWlpaWlpaWlpaWlpaU=",
+      "hashHex": "d10d38d6e04913d0a1be72b71fad3ebe5cc1c7fe0347d4c36f6d1a58455c1762"
+    },
+    {
+      "password": "correct horse battery staple",
+      "saltB64": "Zml4dHVyZS1zYWx0LTMtMkZBLVZhdWx0LTAxMjM0NTY=",
+      "hashHex": "1df64b462cdb40519a0c5ceb7d965216818a9c326b7e8f88b620c52ffa22e584"
+    },
+    {
+      "password": "Tr0ub4dor&3",
+      "saltB64": "Zml4dHVyZS1zYWx0LTMtMkZBLVZhdWx0LTAxMjM0NTY=",
+      "hashHex": "b7dc155279f76c8a318faeecd9035bb5e089842dcc73878b2bc5e0a3eba021e8"
+    }
+  ],
+  "aes_envelopes": [
+    {
+      "password": "correct horse battery staple",
+      "saltB64": "AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8=",
+      "plaintext": "VERIFICATION_TEST_VALUE",
+      "envelope": {
+        "ciphertext": "4UmkyScZ9tdAoSRLt0PKnPPlPQsjWPE=",
+        "iv": "1s9oH8Pit7ABU2HI",
+        "authTag": "KBlRvyAkz9ZoIxIpdeQRWQ=="
+      }
+    },
+    {
+      "password": "correct horse battery staple",
+      "saltB64": "AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8=",
+      "plaintext": "JBSWY3DPEHPK3PXP",
+      "envelope": {
+        "ciphertext": "JWTfgZp3SrG3XJTVdfRioQ==",
+        "iv": "vMU3KEQiVMw3EP47",
+        "authTag": "lioA/qr3+seq+lGDS01VOg=="
+      }
+    },
+    {
+      "password": "correct horse battery staple",
+      "saltB64": "AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8=",
+      "plaintext": "p@ssw0rd-π-unicode",
+      "envelope": {
+        "ciphertext": "/4wBFK5498soIicb8p7qT1K+aQ==",
+        "iv": "XjP+Wx9LN99OLBx7",
+        "authTag": "79YRVkoHiMZGtbZpZcmCxQ=="
+      }
+    },
+    {
+      "password": "Tr0ub4dor&3",
+      "saltB64": "AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8=",
+      "plaintext": "VERIFICATION_TEST_VALUE",
+      "envelope": {
+        "ciphertext": "zPoW6Aw0CKfBbRkiAP6d8LE3Yvk2jHg=",
+        "iv": "vveqAQfMF8QshUxX",
+        "authTag": "o4jA2sg//fiRlHiMRaQ6VQ=="
+      }
+    },
+    {
+      "password": "Tr0ub4dor&3",
+      "saltB64": "AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8=",
+      "plaintext": "JBSWY3DPEHPK3PXP",
+      "envelope": {
+        "ciphertext": "SAU4LJptykkEOBCHFE8CVw==",
+        "iv": "GhXHoArVAIp5T/37",
+        "authTag": "uua4dqAbVPV67K3uIxW61Q=="
+      }
+    },
+    {
+      "password": "Tr0ub4dor&3",
+      "saltB64": "AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8=",
+      "plaintext": "p@ssw0rd-π-unicode",
+      "envelope": {
+        "ciphertext": "+bkKC/+ZZUdTp7IBleLdpN8oRQ==",
+        "iv": "iG+5JIOkncgJDrP2",
+        "authTag": "omR2zryGXa5i8GVEBrGkZA=="
+      }
+    },
+    {
+      "password": "correct horse battery staple",
+      "saltB64": "paWlpaWlpaWlpaWlpaWlpaWlpaWlpaWlpaWlpaWlpaU=",
+      "plaintext": "VERIFICATION_TEST_VALUE",
+      "envelope": {
+        "ciphertext": "Wps0WjAQ10i5aLyzwSGebNDiuE24cjY=",
+        "iv": "EWNNM1oKoxYc3v9l",
+        "authTag": "WdTdM1idYi8ISMkoU5WlFg=="
+      }
+    },
+    {
+      "password": "correct horse battery staple",
+      "saltB64": "paWlpaWlpaWlpaWlpaWlpaWlpaWlpaWlpaWlpaWlpaU=",
+      "plaintext": "JBSWY3DPEHPK3PXP",
+      "envelope": {
+        "ciphertext": "l2XP+/iHfkLMS1GwruMJig==",
+        "iv": "RUQoFJHlQjqO5Ykx",
+        "authTag": "yHPpOd1yjXHdjBQ4GBbN9w=="
+      }
+    },
+    {
+      "password": "correct horse battery staple",
+      "saltB64": "paWlpaWlpaWlpaWlpaWlpaWlpaWlpaWlpaWlpaWlpaU=",
+      "plaintext": "p@ssw0rd-π-unicode",
+      "envelope": {
+        "ciphertext": "yb2UigDmBcPKGlt9bsrRZ6bfPg==",
+        "iv": "TCEnghHFCumK1aOf",
+        "authTag": "cyINv4BJkcf1hF10hTr+Sw=="
+      }
+    },
+    {
+      "password": "Tr0ub4dor&3",
+      "saltB64": "paWlpaWlpaWlpaWlpaWlpaWlpaWlpaWlpaWlpaWlpaU=",
+      "plaintext": "VERIFICATION_TEST_VALUE",
+      "envelope": {
+        "ciphertext": "+hQdijh4NZZ3D+XKOxYGtnH5/vWpbG4=",
+        "iv": "7ocGjJKubmvRya/Q",
+        "authTag": "TrchBjnk7YSnBzBB7mNsjw=="
+      }
+    },
+    {
+      "password": "Tr0ub4dor&3",
+      "saltB64": "paWlpaWlpaWlpaWlpaWlpaWlpaWlpaWlpaWlpaWlpaU=",
+      "plaintext": "JBSWY3DPEHPK3PXP",
+      "envelope": {
+        "ciphertext": "shhz2Iw4AchY9fDI8ovcSw==",
+        "iv": "C83/OxjxnWllzWJn",
+        "authTag": "DNy8vKNERQiclCbb52aIRA=="
+      }
+    },
+    {
+      "password": "Tr0ub4dor&3",
+      "saltB64": "paWlpaWlpaWlpaWlpaWlpaWlpaWlpaWlpaWlpaWlpaU=",
+      "plaintext": "p@ssw0rd-π-unicode",
+      "envelope": {
+        "ciphertext": "j6s9jYztdut3cT6HcazZCLhZww==",
+        "iv": "XrHlyTvWYAxhWlrT",
+        "authTag": "/sewfOLm7WPTrHvoZzC6gA=="
+      }
+    },
+    {
+      "password": "correct horse battery staple",
+      "saltB64": "Zml4dHVyZS1zYWx0LTMtMkZBLVZhdWx0LTAxMjM0NTY=",
+      "plaintext": "VERIFICATION_TEST_VALUE",
+      "envelope": {
+        "ciphertext": "1sYey+8q34hhAh8x0lCttsYiDIE7FiI=",
+        "iv": "498iw6OuHoBopuE+",
+        "authTag": "lZMJUnNwgDPKy/EtduRLnA=="
+      }
+    },
+    {
+      "password": "correct horse battery staple",
+      "saltB64": "Zml4dHVyZS1zYWx0LTMtMkZBLVZhdWx0LTAxMjM0NTY=",
+      "plaintext": "JBSWY3DPEHPK3PXP",
+      "envelope": {
+        "ciphertext": "ZFPe2s8NC99neXKjcCeRTw==",
+        "iv": "6BTofgZbcNYyjpOt",
+        "authTag": "6+DdbhjpD0ak+bixfUpV9Q=="
+      }
+    },
+    {
+      "password": "correct horse battery staple",
+      "saltB64": "Zml4dHVyZS1zYWx0LTMtMkZBLVZhdWx0LTAxMjM0NTY=",
+      "plaintext": "p@ssw0rd-π-unicode",
+      "envelope": {
+        "ciphertext": "Sznko5WIhL+wtZKxnDDzViZVPA==",
+        "iv": "EsiZ45m41I3LXYcN",
+        "authTag": "DDTm6hfQmy+CAniCRuYU8g=="
+      }
+    },
+    {
+      "password": "Tr0ub4dor&3",
+      "saltB64": "Zml4dHVyZS1zYWx0LTMtMkZBLVZhdWx0LTAxMjM0NTY=",
+      "plaintext": "VERIFICATION_TEST_VALUE",
+      "envelope": {
+        "ciphertext": "0/Et1CMa/UBPKK1fgif+wxhIKqX+bnc=",
+        "iv": "Egef1IIfmCbohIuT",
+        "authTag": "XXqL6K9qx183gvjKWLMqJw=="
+      }
+    },
+    {
+      "password": "Tr0ub4dor&3",
+      "saltB64": "Zml4dHVyZS1zYWx0LTMtMkZBLVZhdWx0LTAxMjM0NTY=",
+      "plaintext": "JBSWY3DPEHPK3PXP",
+      "envelope": {
+        "ciphertext": "CSTr1pybCSUG8YNfuI0YRA==",
+        "iv": "Yc4Co9h+WbMJOEFa",
+        "authTag": "TvAY5Z1RC0MRkeiqYlmfbg=="
+      }
+    },
+    {
+      "password": "Tr0ub4dor&3",
+      "saltB64": "Zml4dHVyZS1zYWx0LTMtMkZBLVZhdWx0LTAxMjM0NTY=",
+      "plaintext": "p@ssw0rd-π-unicode",
+      "envelope": {
+        "ciphertext": "HOMruB0au9Spcc4bzajefSq4lg==",
+        "iv": "xU641JWvDjRYepC6",
+        "authTag": "vhdl2dkEi361tIF6OrWkcg=="
+      }
+    }
+  ]
+}

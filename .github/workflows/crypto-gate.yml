@@ -1,0 +1,56 @@
+name: Crypto runtime gate
+
+# RT-14 gate (plan 261007-2255 phase 1): the Windows dev box cannot execute
+# cross-compiled binaries, so WASM correctness is proven here — on a native
+# linux runner we (1) run the full bun test suite (parity fixtures included,
+# hash-wasm is pure WASM), (2) compile the CLI and the runtime probe, and
+# (3) EXECUTE both: `2fav --version` and a deriveKey probe whose output must
+# byte-match a committed browser-captured parity vector.
+#
+# Runs on demand while iterating on crypto code, and as part of the release
+# preconditions (dispatched before tagging cli-v*).
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  runtime-gate:
+    name: Execute compiled binary + deriveKey probe (ubuntu-latest)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile      - name: Full test suite (includes argon2/AES/OTP parity fixtures)
+        run: bun test
+
+      - name: Compile CLI + runtime probe for the native target
+        run: |
+          bun build src/cli.ts --compile --outfile dist/2fav
+          bun build scripts/runtime-probe.ts --compile --outfile dist/2fav-probe
+
+      - name: Execute compiled binary (--version)
+        run: ./dist/2fav --version
+
+      - name: Execute compiled deriveKey probe against committed parity vector
+        run: |
+          # First browser-captured argon2_raw vector from src/fixtures/parity-vectors.json
+          PASSWORD=$(bun -e "const v = await import('./src/fixtures/parity-vectors.json', { with: { type: 'json' } }); console.log(v.default.argon2_raw[0].password)")
+          SALT=$(bun -e "const v = await import('./src/fixtures/parity-vectors.json', { with: { type: 'json' } }); console.log(v.default.argon2_raw[0].saltB64)")
+          EXPECTED=$(bun -e "const v = await import('./src/fixtures/parity-vectors.json', { with: { type: 'json' } }); console.log(v.default.argon2_raw[0].hashHex)")
+          ACTUAL=$(./dist/2fav-probe "$PASSWORD" "$SALT")
+          echo "expected: $EXPECTED"
+          echo "actual:   $ACTUAL"
+          if [ "$ACTUAL" != "$EXPECTED" ]; then
+            echo "::error::Compiled-binary deriveKey does not match the browser-captured parity vector"
+            exit 1
+          fi

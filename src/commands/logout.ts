@@ -16,7 +16,9 @@ export const logoutCommand = new Command('logout')
         if (await keychain.isAvailable()) {
             try {
                 // Remove all entries (supports multi-instance); ignore misses.
+                // Also purges any `--remember` derived-key cache entries.
                 await keychain.remove();
+                await keychain.removeAllDerivedKeys();
                 removedSomething = true;
             } catch {
                 /* fall through to fallback */

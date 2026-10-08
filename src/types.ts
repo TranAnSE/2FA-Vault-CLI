@@ -66,3 +66,31 @@ export interface UserResponse {
     email?: string;
     id?: number;
 }
+
+/**
+ * An E2EE account as returned by `GET /api/v1/twofaccounts/encrypted`
+ * (EncryptedTwoFAccountResource): carries the ciphertext envelope in
+ * `secret` unconditionally — the server can never decrypt it.
+ */
+export interface EncryptedAccount {
+    id: number;
+    service: string | null;
+    account: string | null;
+    otp_type: 'totp' | 'hotp' | 'steamtotp' | string;
+    /** JSON string: {"ciphertext":"b64","iv":"b64","authTag":"b64"}. */
+    secret: string;
+    encrypted: boolean;
+    digits?: number;
+    algorithm?: string;
+    period?: number | null;
+    counter?: number | null;
+    group_id?: number | null;
+    notes?: string | null;
+    is_pinned?: boolean;
+    recovery_codes?: string | null;
+}
+
+/** Response envelope for `GET /api/v1/twofaccounts/encrypted`. */
+export interface EncryptedAccountListResponse {
+    data?: EncryptedAccount[];
+}

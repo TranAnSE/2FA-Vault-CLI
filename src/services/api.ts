@@ -14,10 +14,13 @@ import type { ApiConfig } from '../types.js';
 /** CLI-domain error carrying an exit code (CI-friendly). */
 export class CliError extends Error {
     readonly exitCode: number;
-    constructor(message: string, exitCode = 1) {
+    /** HTTP status when the error came from an API response (0/undefined otherwise). */
+    readonly status?: number;
+    constructor(message: string, exitCode = 1, status?: number) {
         super(message);
         this.name = 'CliError';
         this.exitCode = exitCode;
+        this.status = status;
     }
 }
 
@@ -51,6 +54,26 @@ export async function apiGet<T>(path: string, init: RequestInit = {}): Promise<T
     return apiRequest<T>(path, { ...init, method: 'GET' });
 }
 
+/** Perform an authenticated POST with a JSON body. */
+export async function apiPost<T>(path: string, body: unknown, init: RequestInit = {}): Promise<T> {
+    return apiRequest<T>(path, {
+        ...init,
+        method: 'POST',
+        body: JSON.stringify(body),
+        headers: { 'Content-Type': 'application/json', ...(init.headers ?? {}) },
+    });
+}
+
+/** Perform an authenticated PATCH with a JSON body. */
+export async function apiPatch<T>(path: string, body: unknown, init: RequestInit = {}): Promise<T> {
+    return apiRequest<T>(path, {
+        ...init,
+        method: 'PATCH',
+        body: JSON.stringify(body),
+        headers: { 'Content-Type': 'application/json', ...(init.headers ?? {}) },
+    });
+}
+
 /** Perform an authenticated request and parse the JSON body. */
 export async function apiRequest<T>(path: string, init: RequestInit = {}): Promise<T> {
     const creds = await resolveCredentials();
@@ -82,7 +105,7 @@ export async function apiRequest<T>(path: string, init: RequestInit = {}): Promi
     clearTimeout(timer);
 
     if (!res.ok) {
-        throw new CliError(await formatHttpError(res, path));
+        throw new CliError(await formatHttpError(res, path), 1, res.status);
     }
 
     const text = await res.text();
@@ -98,8 +121,11 @@ export async function apiRequest<T>(path: string, init: RequestInit = {}): Promi
 async function formatHttpError(res: Response, path: string): Promise<string> {
     let serverMsg = '';
     try {
-        const body = await res.clone().json();
-        serverMsg = typeof body?.message === 'string' ? body.message : JSON.stringify(body);
+        const body: unknown = await res.clone().json();
+        serverMsg =
+            typeof body === 'object' && body !== null && 'message' in body && typeof (body as { message: unknown }).message === 'string'
+                ? (body as { message: string }).message
+                : JSON.stringify(body);
     } catch {
         /* body wasn't JSON */
     }
@@ -110,6 +136,12 @@ async function formatHttpError(res: Response, path: string): Promise<string> {
 
 /** Map common status codes to actionable hints. */
 function authHint(status: number, path: string): string {
+    // A failed vault verification is 401 but has nothing to do with the PAT
+    // (the server answers `Verification failed` when the derived key does not
+    // decrypt the stored test value) — the generic re-login hint mislabels it.
+    if (status === 401 && path.startsWith('/encryption/verify')) {
+        return 'Master password verification failed. The derived key does not match this vault.';
+    }
     switch (status) {
         case 401:
             return 'Authentication failed (401). Your PAT may be invalid or revoked — run `2fav login` again.';

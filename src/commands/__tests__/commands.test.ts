@@ -26,20 +26,37 @@ const accountsIndex: Account[] = [
 ];
 
 const apiGetMock = mock(async (path: string) => {
+    // NOTE: the /otp route is matched before the generic /twofaccounts prefix
+    // so get.ts's fetchOtp (`/twofaccounts/{id}/otp`) reaches it.
     if (path.startsWith('/twofaccounts/encrypted')) {
-        const encrypted: AccountListResponse = { data: [{ id: 3, service: 'AWS', account: 'root', otp_type: 'hotp' }] };
+        const encrypted: AccountListResponse = {
+            data: [
+                { id: 3, service: 'AWS', account: 'root', otp_type: 'hotp' },
+                { id: 2, service: 'SecretSvc', account: 'bob', otp_type: 'totp' },
+            ],
+        };
         return encrypted;
-    }
-    if (path.startsWith('/twofaccounts')) {
-        return { data: accountsIndex } as AccountListResponse;
     }
     if (path.includes('/otp')) {
         return { password: '045698', otp_type: 'totp', period: 30 };
     }
-    return null;
+    if (path.startsWith('/twofaccounts')) {
+        return { data: accountsIndex } as AccountListResponse;
+    }
+    // Fall through to the REAL api for anything this file's fixtures don't
+    // cover: later test files (vault/e2ee) share Bun's module registry, and
+    // get.js/vault.js bind whatever was in the api slot when they first
+    // loaded — the real fallback (driven by their own fetch mocks) keeps
+    // those bindings functional instead of returning null.
+    return realApi.apiGet(path);
 });
 
+// The real module first, so the mock can spread its full surface
+// (apiPost/apiPatch/apiRequest/… — vault.js imports them statically).
+const realApi = await import('../../services/api.js');
+
 mock.module('../../services/api.js', () => ({
+    ...realApi,
     apiGet: apiGetMock,
     CliError,
     resolveCredentials: async () => ({ host: 'https://vault.example.com', pat: 'pat-SECRET' }),

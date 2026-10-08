@@ -114,6 +114,97 @@ function parseConfig(raw: string): ApiConfig | null {
     return null;
 }
 
+// ---- Derived-key cache (opt-in `--remember`, TTL, one entry per host+salt) ----
+
+/**
+ * A cached vault key. ONLY the derived key is ever persisted — never the
+ * master password — and only into the OS keychain, always with a TTL.
+ */
+export interface DerivedKeyEntry {
+    host: string;
+    /** base64 salt the key was derived from (the cache is salt-keyed). */
+    salt: string;
+    /** base64 of the raw 32-byte derived key. */
+    keyB64: string;
+    /** epoch ms when the key was derived. */
+    derivedAt: number;
+    /** time-to-live in ms. */
+    ttlMs: number;
+}
+
+/** Suffix marking a keychain account as a derived-key cache entry. */
+const DERIVED_KEY_SUFFIX = ':derived-key';
+
+/**
+ * Cache account key: `host + ':' + hex(sha256(salt)).slice(0,16) + ':derived-key'`.
+ * Keyed by host AND salt so multi-salt vaults coexist (RT-12).
+ */
+export function derivedKeyAccount(host: string, salt: string): string {
+    const digest = new Bun.CryptoHasher('sha256').update(salt).digest('hex');
+    return `${host}:${digest.slice(0, 16)}${DERIVED_KEY_SUFFIX}`;
+}
+
+/** Store a derived-key cache entry. Throws on hard keytar failures. */
+export async function storeDerivedKey(entry: DerivedKeyEntry): Promise<void> {
+    const keytar = await loadKeytar();
+    if (!keytar) throw new Error('keychain unavailable');
+    await keytar.setPassword(
+        KEYCHAIN_SERVICE,
+        derivedKeyAccount(entry.host, entry.salt),
+        JSON.stringify(entry),
+    );
+}
+
+/**
+ * Read the derived-key entry for a host+salt. Returns null when absent or
+ * expired — expired entries are purged on read.
+ */
+export async function getDerivedKey(host: string, salt: string): Promise<DerivedKeyEntry | null> {
+    const keytar = await loadKeytar();
+    if (!keytar) return null;
+    const raw = await keytar.getPassword(KEYCHAIN_SERVICE, derivedKeyAccount(host, salt));
+    if (!raw) return null;
+    let entry: DerivedKeyEntry | null = null;
+    try {
+        const obj = JSON.parse(raw) as Partial<DerivedKeyEntry>;
+        if (
+            typeof obj.host === 'string' &&
+            typeof obj.salt === 'string' &&
+            typeof obj.keyB64 === 'string' &&
+            typeof obj.derivedAt === 'number' &&
+            typeof obj.ttlMs === 'number'
+        ) {
+            entry = obj as DerivedKeyEntry;
+        }
+    } catch {
+        /* not JSON — treat as absent */
+    }
+    if (entry && Date.now() > entry.derivedAt + entry.ttlMs) {
+        await keytar.deletePassword(KEYCHAIN_SERVICE, derivedKeyAccount(host, salt));
+        return null;
+    }
+    return entry;
+}
+
+/** Remove the derived-key entry for a host+salt (idempotent). */
+export async function removeDerivedKey(host: string, salt: string): Promise<void> {
+    const keytar = await loadKeytar();
+    if (!keytar) return;
+    await keytar.deletePassword(KEYCHAIN_SERVICE, derivedKeyAccount(host, salt));
+}
+
+/** Remove every derived-key entry across all hosts (`2fav logout`). */
+export async function removeAllDerivedKeys(): Promise<void> {
+    const keytar = await loadKeytar();
+    if (!keytar) return;
+    const creds = await keytar.findCredentials(KEYCHAIN_SERVICE);
+    for (const c of creds) {
+        if (c.account.endsWith(DERIVED_KEY_SUFFIX)) {
+            await keytar.deletePassword(KEYCHAIN_SERVICE, c.account);
+        }
+    }
+}
+
 // ---- Plaintext fallback store (~/.2fav/config.json, mode 0600) ----
 
 export async function fallbackExists(): Promise<boolean> {

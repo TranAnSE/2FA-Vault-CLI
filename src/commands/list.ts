@@ -2,12 +2,14 @@
  * `2fav list [--filter <text>]`
  *
  * Calls `GET /api/v1/twofaccounts` and prints `service — account` per row.
- * The optional `--filter` performs a client-side case-insensitive substring
- * match against `service` or `account`.
+ * E2EE accounts get a 🔒 glyph (they need a vault unlock before `get`/`copy`
+ * can compute their OTP locally). The optional `--filter` performs a
+ * client-side case-insensitive substring match against `service` or `account`.
  */
 
 import { Command } from 'commander';
 import { apiGet, CliError } from '../services/api.js';
+import { fetchEncryptedAccounts } from '../services/vault.js';
 import type { Account, AccountListResponse } from '../types.js';
 
 export const listCommand = new Command('list')
@@ -17,6 +19,7 @@ export const listCommand = new Command('list')
     .action(async (opts: { filter?: string; search?: string }) => {
         const body = await apiGet<AccountListResponse>('/twofaccounts?withOtp=0');
         const accounts = body?.data ?? [];
+        const encryptedIds = new Set((await fetchEncryptedAccounts()).map((a) => a.id));
 
         const query = opts.filter ?? opts.search;
         const visible = query ? applyFilter(accounts, query) : accounts;
@@ -26,7 +29,8 @@ export const listCommand = new Command('list')
         }
 
         for (const a of visible) {
-            console.log(`[${a.id}] ${label(a)}`);
+            const glyph = encryptedIds.has(a.id) ? '🔒 ' : '';
+            console.log(`[${a.id}] ${glyph}${label(a)}`);
         }
         console.log(`\n${visible.length} account${visible.length === 1 ? '' : 's'}.`);
     });

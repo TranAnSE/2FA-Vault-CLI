@@ -1,29 +1,37 @@
 /**
- * `2fav get <service> [--watch] [--copy]`
+ * `2fav get <service> [--watch] [--copy] [--remember[=<hours>]]`
  *
- * Finds a single account by service/account name, then calls the server-side
- * OTP endpoint `GET /api/v1/twofaccounts/{id}/otp` and prints the password.
+ * Finds a single account by service/account name, then prints its OTP.
  *
- * - `--watch` refreshes the OTP at the start of each TOTP period (HOTP has no
+ * Non-E2EE accounts take the server-side path: `GET /api/v1/twofaccounts/{id}/otp`.
+ * E2EE accounts take the local path: the vault is unlocked locally (master
+ * password → Argon2id → test-value verification), the secret envelope is
+ * decrypted locally and the OTP is computed locally (mirrors the web app) —
+ * the server never sees key material (see services/vault.ts).
+ *
+ * - `--watch` refreshes the OTP at the start of each period (HOTP has no
  *   period, so --watch is disabled for HOTP with a note).
  * - `--copy` additionally writes the password to the system clipboard.
- * - E2EE accounts store a ciphertext secret the server cannot turn into an OTP;
- *   we detect them up front and emit a clear, actionable error.
- *
- * TODO(Phase 2): Add local E2EE decryption. When the vault is unlocked with a
- * cached master key, decrypt the account secret locally and compute the TOTP
- * client-side (mirrors resources/js/services/crypto.js) instead of asking the
- * server to generate the OTP.
+ * - `--remember[=<hours>]` caches the derived key (never the password) in the
+ *   OS keychain so subsequent runs skip the prompt (default 8h).
  */
 
 import { Command } from 'commander';
 import { apiGet, CliError } from '../services/api.js';
 import { copyToClipboard } from '../services/clipboard.js';
-import type { Account, AccountListResponse, OtpResponse } from '../types.js';
+import {
+    ensureKey,
+    parseRememberHours,
+    fetchEncryptedAccounts,
+    localOtp,
+    localPeriodRemaining,
+} from '../services/vault.js';
+import type { Account, AccountListResponse, OtpResponse, EncryptedAccount } from '../types.js';
 
 interface GetOptions {
     watch?: boolean;
     copy?: boolean;
+    remember?: string | boolean;
 }
 
 export const getCommand = new Command('get')
@@ -31,9 +39,19 @@ export const getCommand = new Command('get')
     .argument('<service>', 'Service name (or account) to search for')
     .option('--watch', 'Refresh the OTP at the start of each TOTP period until interrupted')
     .option('--copy', 'Also copy the OTP to the system clipboard')
+    .option('--remember [hours]', 'Cache the derived key in the OS keychain (never the password); TTL in hours, default 8')
     .action(async (service: string, opts: GetOptions) => {
         const account = await findUniqueAccount(service);
-        await assertNotEncrypted(account.id, service);
+        const rememberHours = parseRememberHours(opts.remember);
+
+        const encrypted = await findEncryptedAccount(account.id);
+        if (encrypted) {
+            await printLocalOtp(encrypted, { rememberHours, copy: opts.copy ?? false });
+            if (opts.watch) {
+                await watchLocal(encrypted, { copy: opts.copy ?? false });
+            }
+            return;
+        }
 
         await printOtp(account, opts);
         if (!opts.watch) return;
@@ -46,6 +64,43 @@ export const getCommand = new Command('get')
         }
         await watchLoop(account, period, opts);
     });
+
+// ---- Local (E2EE) path ----
+
+/** Look up the account in the encrypted list, if it is E2EE. */
+async function findEncryptedAccount(id: number): Promise<EncryptedAccount | null> {
+    const encrypted = await fetchEncryptedAccounts();
+    return encrypted.find((a) => a.id === id) ?? null;
+}
+
+/** Unlock (if needed), compute the OTP locally, print (+copy) it once. */
+async function printLocalOtp(
+    encrypted: EncryptedAccount,
+    opts: { rememberHours?: number; copy: boolean },
+): Promise<void> {
+    const key = await ensureKey({ rememberHours: opts.rememberHours });
+    const password = await localOtp(encrypted, key.keyBytes);
+    if (opts.copy) {
+        await copyOrWarn(password);
+    }
+    console.log(password);
+}
+
+/** Local --watch loop: recompute at each period boundary, no re-fetch. */
+async function watchLocal(encrypted: EncryptedAccount, opts: { copy: boolean }): Promise<void> {
+    const period = encrypted.period && encrypted.period > 0 ? encrypted.period : 30;
+    if (encrypted.otp_type === 'hotp') {
+        console.error('note: --watch disabled for HOTP/period-less accounts.');
+        return;
+    }
+    for (;;) {
+        const sleepMs = localPeriodRemaining(period) * 1000;
+        await sleep(sleepMs);
+        await printLocalOtp(encrypted, { ...opts, rememberHours: undefined });
+    }
+}
+
+// ---- Server-OTP path (non-E2EE) ----
 
 /** Fetch and print one OTP, copying to clipboard when requested. */
 async function printOtp(account: Account, opts: GetOptions): Promise<void> {
@@ -119,22 +174,6 @@ export async function findUniqueAccount(query: string): Promise<Account> {
         );
     }
     return matches[0];
-}
-
-/**
- * Fail fast with a clear message when the account uses E2EE. The server cannot
- * generate OTPs for E2EE secrets without the master password, which the CLI
- * never accepts (v1). We detect membership against the encrypted-accounts list.
- */
-async function assertNotEncrypted(id: number, query: string): Promise<void> {
-    const body = await apiGet<AccountListResponse>('/twofaccounts/encrypted');
-    const encryptedIds = new Set((body?.data ?? []).map((a) => a.id));
-    if (encryptedIds.has(id)) {
-        throw new CliError(
-            `'${query}' uses E2EE — the server cannot generate its OTP. ` +
-                'CLI v1 supports non-E2EE vaults only.',
-        );
-    }
 }
 
 /** Human-readable `service — account` label (null-safe). */

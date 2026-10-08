@@ -5,6 +5,40 @@ All notable changes to the 2FA-Vault CLI will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.0] - 2026-10-09
+
+### Added
+
+- **Local E2EE vault support** (CLI Phase 2): `get` / `copy` now decrypt E2EE
+  accounts locally — Argon2id key derivation (hash-wasm) + AES-256-GCM, byte-identical
+  with the web app — and compute TOTP/HOTP/Steam OTPs on the machine. The
+  master password is used once at unlock and never stored or sent.
+- `--remember[=<hours>]` on `get` / `copy`: opt-in derived-key cache in the OS
+  keychain (default 8h TTL, keyed by host + salt, never the password, re-verified
+  against the vault test value on every run, purged on failure/expiry/logout).
+- `2fav list` marks E2EE accounts with a 🔒 glyph.
+- Local Argon2id/AES/OTP crypto engine (`services/crypto.ts`, `services/otp.ts`)
+  with cross-implementation parity fixtures: argon2 raw hashes + AES envelopes
+  captured in chromium against the real argon2-browser WASM, OTP vectors from
+  the PHP server stack (otphp + steam-totp), and RFC 6238 known answers.
+- `crypto-gate` GitHub Actions workflow: on ubuntu it runs the full suite,
+  compiles the CLI + a deriveKey probe and executes both, proving the WASM
+  works in the compiled binary (RT-14 gate).
+
+### Changed
+
+- E2EE detection in `get`/`copy` no longer fails fast: E2EE accounts take the
+  local decrypt path (the old server-cannot-decrypt error remains for
+  team-shared E2EE accounts, which cannot be unwrapped locally).
+- HOTP generation syncs the server counter via `PATCH /twofaccounts/{id}/counter`
+  and adopts the server counter once on a non-monotonic (422) rejection.
+- Unlock attests via `POST /encryption/verify` at most once per cache lifetime;
+  a 429 (shared per-IP budget) or network error is skipped silently.
+- A failed vault verification now answers with a vault-specific message instead
+  of the generic "PAT may be invalid" hint.
+- `2fav login` prompt logic shared with the vault unlock prompt (muted echo on
+  TTY, piped-stdin fallback).
+
 ## [0.2.0] - 2026-08-08
 
 ### Added

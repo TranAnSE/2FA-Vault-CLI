@@ -16,9 +16,9 @@
  */
 
 import { Command } from 'commander';
-import { createInterface } from 'node:readline';
 import * as keychain from '../services/keychain.js';
 import { CliError } from '../services/api.js';
+import { promptHidden } from '../services/prompt.js';
 import type { UserResponse } from '../types.js';
 
 /** Default request timeout for the verification call. */
@@ -41,39 +41,7 @@ function normaliseHost(host: string): string {
  * (piped stdin), the value is read line-by-line without prompting.
  */
 function promptForPat(): Promise<string> {
-    if (!process.stdin.isTTY) {
-        // Non-interactive: read the first line of piped input.
-        return new Promise<string>((resolve, reject) => {
-            let data = '';
-            process.stdin.setEncoding('utf8');
-            process.stdin.on('data', (chunk) => {
-                data += chunk;
-                const nl = data.indexOf('\n');
-                if (nl >= 0) {
-                    process.stdin.removeAllListeners('data');
-                    resolve(data.slice(0, nl).replace(/\r$/, '').trim());
-                }
-            });
-            process.stdin.on('end', () => resolve(data.trim()));
-            process.stdin.on('error', reject);
-        });
-    }
-
-    const rl = createInterface({ input: process.stdin, output: process.stdout, terminal: true });
-    // Mute echoed characters while typing the PAT. We only let newlines through
-    // so the prompt stays on its own line; everything else is swallowed.
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    (rl as any)._writeToOutput = (s: string) => {
-        if (s === '\r' || s === '\n') rl.write(s);
-    };
-
-    return new Promise<string>((resolve) => {
-        rl.question('Personal Access Token: ', (answer) => {
-            rl.close();
-            console.log(''); // newline after the muted prompt
-            resolve(answer.trim());
-        });
-    });
+    return promptHidden('Personal Access Token: ');
 }
 
 /**

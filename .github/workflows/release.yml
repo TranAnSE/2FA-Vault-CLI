@@ -82,13 +82,13 @@ jobs:
         run: bun build src/cli.ts --compile --target=${{ matrix.target }} --outfile dist/${{ matrix.artifact }}
 
       - name: Smoke test (unix)
-        if: runner.os != 'Windows'
+        if: runner.os != 'Windows' && matrix.smoke != false
         run: |
           chmod +x dist/${{ matrix.artifact }}
           ./dist/${{ matrix.artifact }} --version
 
       - name: Smoke test (windows)
-        if: runner.os == 'Windows'
+        if: runner.os == 'Windows' && matrix.smoke != false
         run: ./dist/${{ matrix.artifact }} --version
 
       - name: Upload artifact

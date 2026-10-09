@@ -34,21 +34,30 @@ jobs:
       fail-fast: false
       matrix:
         include:
+          # smoke: whether the built binary can be EXECUTED on the build
+          # runner (darwin-x64 runs via Rosetta on the arm64 mac runner;
+          # linux-arm64 is cross-compiled on x64 and cannot execute there —
+          # its runtime correctness is proven by the crypto gate on linux).
           - os: ubuntu-latest
             target: bun-linux-x64
             artifact: 2fav-linux-x64
+            smoke: true
           - os: ubuntu-latest
             target: bun-linux-arm64
             artifact: 2fav-linux-arm64
+            smoke: false
           - os: macos-latest
             target: bun-darwin-x64
             artifact: 2fav-darwin-x64
+            smoke: true
           - os: macos-latest
             target: bun-darwin-arm64
             artifact: 2fav-darwin-arm64
+            smoke: true
           - os: windows-latest
             target: bun-windows-x64
             artifact: 2fav-win-x64.exe
+            smoke: true
     steps:
       - name: Checkout
         uses: actions/checkout@v4

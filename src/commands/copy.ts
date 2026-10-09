@@ -35,6 +35,9 @@ export const copyCommand = new Command('copy')
         if (encrypted) {
             const key = await ensureKey({ rememberHours });
             password = await localOtp(encrypted, key.keyBytes);
+            // One-shot use: scrub the derived key. (The password string is
+            // immutable JS — an accepted residual, same as the web app.)
+            key.keyBytes.fill(0);
         } else {
             password = await fetchOtp(account.id);
         }

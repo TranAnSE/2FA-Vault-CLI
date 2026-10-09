@@ -19,7 +19,15 @@ export const listCommand = new Command('list')
     .action(async (opts: { filter?: string; search?: string }) => {
         const body = await apiGet<AccountListResponse>('/twofaccounts?withOtp=0');
         const accounts = body?.data ?? [];
-        const encryptedIds = new Set((await fetchEncryptedAccounts()).map((a) => a.id));
+        // The E2EE marker is a nice-to-have: if the encrypted endpoint fails
+        // (offline instance, transient error, non-E2EE deployments without
+        // the route), degrade to a glyph-less listing instead of failing.
+        let encryptedIds = new Set<number>();
+        try {
+            encryptedIds = new Set((await fetchEncryptedAccounts()).map((a) => a.id));
+        } catch {
+            console.error('note: could not fetch the E2EE marker list — listing without 🔒 glyphs.');
+        }
 
         const query = opts.filter ?? opts.search;
         const visible = query ? applyFilter(accounts, query) : accounts;

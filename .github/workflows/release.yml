@@ -19,8 +19,16 @@ permissions:
   contents: write # required by softprops/action-gh-release to upload assets
 
 jobs:
+  # Runtime crypto proof (tests + typecheck + compiled-binary deriveKey probe
+  # against a committed browser parity vector) runs as part of the release, so
+  # a tag can never bypass it.
+  crypto-gate:
+    name: Crypto runtime gate
+    uses: ./.github/workflows/crypto-gate.yml
+
   build:
     name: Build ${{ matrix.target }}
+    needs: crypto-gate
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -52,6 +60,9 @@ jobs:
 
       - name: Install dependencies
         run: bun install --frozen-lockfile
+
+      - name: Typecheck
+        run: bun run typecheck
 
       - name: Run unit tests
         # Gate the release on the test suite so a regression cannot ship a

@@ -7,7 +7,7 @@
  * the `runViaBun` branch. The real `Bun.spawn` is restored after each test.
  */
 
-import { test, expect, mock, beforeEach, afterEach } from 'bun:test';
+import { test, expect, mock, beforeEach, afterEach, afterAll } from 'bun:test';
 
 // ---- in-memory records of what Bun.spawn did ----
 
@@ -17,6 +17,18 @@ interface SpawnRecord {
     stdinInput: string;
     exitCode: number;
     error?: Error;
+}
+
+/** The shape clipboard.ts consumes from Bun.spawn (plain functions — the
+ * in-memory fakes must not force Mock<> onto mockImplementationOnce payloads). */
+interface SpawnResult {
+    stdin: {
+        getWriter: () => { write: (input: Uint8Array) => Promise<void>; close: () => Promise<void> };
+    };
+    stdout: 'ignore';
+    stderr: 'ignore';
+    exited: Promise<number>;
+    exitCode: number;
 }
 
 let spawnLog: SpawnRecord[] = [];
@@ -30,7 +42,7 @@ const fakeWriter = {
     close: mock(() => Promise.resolve()),
 };
 
-const fakeBunSpawn = mock((opts: { cmd: string[] }) => {
+const fakeBunSpawn = mock((opts: { cmd: string[] }): SpawnResult => {
     const [cmd, ...args] = opts.cmd;
     const rec: SpawnRecord = { cmd, args, stdinInput: '', exitCode: 0 };
     spawnLog.push(rec);
@@ -46,10 +58,15 @@ const fakeBunSpawn = mock((opts: { cmd: string[] }) => {
 });
 
 // `globalThis.Bun` itself is a readonly binding, but its `spawn` property is
-// writable. Override just that one method (clipboard.ts reads `Bun.spawn`).
+// writable. Override just that one method (clipboard.ts reads `Bun.spawn`),
+// and restore the real one after the file's tests finish.
 const bunGlobal = globalThis as { Bun: { spawn: unknown } };
 const REAL_SPAWN = bunGlobal.Bun.spawn;
 bunGlobal.Bun.spawn = fakeBunSpawn;
+
+afterAll(() => {
+    bunGlobal.Bun.spawn = REAL_SPAWN;
+});
 
 // Mock `node:os` so we can flip the platform per test.
 const fakeOs = {

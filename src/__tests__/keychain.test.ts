@@ -55,7 +55,7 @@ const fakeFs = {
         }
         return Promise.resolve(data);
     }),
-    chmod: mock(() => Promise.resolve(undefined)),
+    chmod: mock((_path: string, _mode: number) => Promise.resolve(undefined)),
     stat: mock((path: string) => {
         if (!fsFiles.has(path)) {
             const err: NodeJS.ErrnoException = new Error('ENOENT');

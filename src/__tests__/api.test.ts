@@ -17,14 +17,16 @@ const TEST_PAT = 'pat-SECRET';
 
 const fakeKeytar = {
     setPassword: mock(() => Promise.resolve()),
-    getPassword: mock((service: string, account: string) => {
+    getPassword: mock((_service: string, account: string) => {
         if (account === TEST_HOST) {
             return Promise.resolve(JSON.stringify({ host: TEST_HOST, pat: TEST_PAT }));
         }
         return Promise.resolve(null);
     }),
     deletePassword: mock(() => Promise.resolve(true)),
-    findCredentials: mock(() => Promise.resolve([])),
+    findCredentials: mock((): Promise<Array<{ account: string; password: string }>> =>
+        Promise.resolve([]),
+    ),
 };
 
 mock.module('keytar', () => fakeKeytar);
@@ -50,11 +52,14 @@ mock.module('node:fs/promises', () => fakeFs);
 
 // Dynamic import so the module graph picks up the mocks.
 const { CliError, apiGet, apiRequest } = await import('../services/api.js');
+// A dynamic import yields a const binding — usable as a value, not a type.
+type CliErrorInstance = InstanceType<typeof CliError>;
 
 // ---- fetch mock ----
 
-const fetchMock = mock((_input: string | URL | Request, _init?: RequestInit) =>
-    Promise.reject(new Error('fetch not configured for this test')),
+const fetchMock = mock(
+    (_input: string | URL | Request, _init?: RequestInit): Promise<Response> =>
+        Promise.reject(new Error('fetch not configured for this test')),
 );
 
 beforeEach(() => {
@@ -143,7 +148,7 @@ test('apiRequest() rejects with CliError on a 401', async () => {
     let caught: unknown;
     await apiRequest('/twofaccounts').catch((e) => (caught = e));
     expect(caught).toBeInstanceOf(CliError);
-    expect((caught as CliError).message).toContain('401');
+    expect((caught as CliErrorInstance).message).toContain('401');
 });
 
 test('apiRequest() rejects with CliError on a 404', async () => {
@@ -154,7 +159,7 @@ test('apiRequest() rejects with CliError on a 404', async () => {
     let caught: unknown;
     await apiRequest('/twofaccounts/999').catch((e) => (caught = e));
     expect(caught).toBeInstanceOf(CliError);
-    expect((caught as CliError).message).toContain('404');
+    expect((caught as CliErrorInstance).message).toContain('404');
 });
 
 test('apiRequest() rejects with CliError on a network failure', async () => {
@@ -163,7 +168,7 @@ test('apiRequest() rejects with CliError on a network failure', async () => {
     let caught: unknown;
     await apiRequest('/twofaccounts').catch((e) => (caught = e));
     expect(caught).toBeInstanceOf(CliError);
-    expect((caught as CliError).message).toContain('Could not reach');
+    expect((caught as CliErrorInstance).message).toContain('Could not reach');
 });
 
 test('apiRequest() rejects with a "Not logged in" CliError when no creds are stored', async () => {
@@ -174,7 +179,7 @@ test('apiRequest() rejects with a "Not logged in" CliError when no creds are sto
     let caught: unknown;
     await apiRequest('/twofaccounts').catch((e) => (caught = e));
     expect(caught).toBeInstanceOf(CliError);
-    expect((caught as CliError).message.toLowerCase()).toContain('not logged in');
+    expect((caught as CliErrorInstance).message.toLowerCase()).toContain('not logged in');
     // fetch must never have been called.
     expect(fetchMock).not.toHaveBeenCalled();
 });
@@ -192,7 +197,7 @@ test('apiRequest() rejects on a non-JSON 2xx body', async () => {
     let caught: unknown;
     await apiRequest('/twofaccounts').catch((e) => (caught = e));
     expect(caught).toBeInstanceOf(CliError);
-    expect((caught as CliError).message).toContain('non-JSON');
+    expect((caught as CliErrorInstance).message).toContain('non-JSON');
 });
 
 test('apiRequest() returns undefined for an empty 2xx body', async () => {

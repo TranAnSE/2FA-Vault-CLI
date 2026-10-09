@@ -51,7 +51,12 @@ export const getCommand = new Command('get')
             const key = await ensureKey({ rememberHours });
             await printLocalOtp(encrypted, key.keyBytes, { copy: opts.copy ?? false });
             if (opts.watch) {
+                // The watch loop holds the key until interrupted.
                 await watchLocal(encrypted, key.keyBytes, { copy: opts.copy ?? false });
+            } else {
+                // One-shot use: scrub the derived key. (The password string
+                // is immutable JS — an accepted residual, like the web app.)
+                key.keyBytes.fill(0);
             }
             return;
         }

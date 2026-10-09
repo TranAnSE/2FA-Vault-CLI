@@ -22,7 +22,7 @@ import { copyToClipboard } from '../services/clipboard.js';
 import {
     ensureKey,
     parseRememberHours,
-    fetchEncryptedAccounts,
+    findEncryptedAccount,
     localOtp,
     localPeriodRemaining,
 } from '../services/vault.js';
@@ -46,9 +46,12 @@ export const getCommand = new Command('get')
 
         const encrypted = await findEncryptedAccount(account.id);
         if (encrypted) {
-            await printLocalOtp(encrypted, { rememberHours, copy: opts.copy ?? false });
+            // Unlock exactly once: --watch recomputes from the held key with
+            // no re-prompt and no network inside the loop.
+            const key = await ensureKey({ rememberHours });
+            await printLocalOtp(encrypted, key.keyBytes, { copy: opts.copy ?? false });
             if (opts.watch) {
-                await watchLocal(encrypted, { copy: opts.copy ?? false });
+                await watchLocal(encrypted, key.keyBytes, { copy: opts.copy ?? false });
             }
             return;
         }
@@ -67,27 +70,26 @@ export const getCommand = new Command('get')
 
 // ---- Local (E2EE) path ----
 
-/** Look up the account in the encrypted list, if it is E2EE. */
-async function findEncryptedAccount(id: number): Promise<EncryptedAccount | null> {
-    const encrypted = await fetchEncryptedAccounts();
-    return encrypted.find((a) => a.id === id) ?? null;
-}
-
-/** Unlock (if needed), compute the OTP locally, print (+copy) it once. */
+/** Compute the OTP locally with an already-unlocked key, print (+copy) it once. */
 async function printLocalOtp(
     encrypted: EncryptedAccount,
-    opts: { rememberHours?: number; copy: boolean },
+    keyBytes: Uint8Array,
+    opts: { copy: boolean },
 ): Promise<void> {
-    const key = await ensureKey({ rememberHours: opts.rememberHours });
-    const password = await localOtp(encrypted, key.keyBytes);
+    const password = await localOtp(encrypted, keyBytes);
     if (opts.copy) {
         await copyOrWarn(password);
     }
     console.log(password);
 }
 
-/** Local --watch loop: recompute at each period boundary, no re-fetch. */
-async function watchLocal(encrypted: EncryptedAccount, opts: { copy: boolean }): Promise<void> {
+/** Local --watch loop: recompute at each period boundary from the held key —
+ * no re-prompt, no network inside the loop. */
+async function watchLocal(
+    encrypted: EncryptedAccount,
+    keyBytes: Uint8Array,
+    opts: { copy: boolean },
+): Promise<void> {
     const period = encrypted.period && encrypted.period > 0 ? encrypted.period : 30;
     if (encrypted.otp_type === 'hotp') {
         console.error('note: --watch disabled for HOTP/period-less accounts.');
@@ -96,7 +98,7 @@ async function watchLocal(encrypted: EncryptedAccount, opts: { copy: boolean }):
     for (;;) {
         const sleepMs = localPeriodRemaining(period) * 1000;
         await sleep(sleepMs);
-        await printLocalOtp(encrypted, { ...opts, rememberHours: undefined });
+        await printLocalOtp(encrypted, keyBytes, opts);
     }
 }
 

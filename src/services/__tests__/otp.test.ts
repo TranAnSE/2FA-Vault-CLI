@@ -18,25 +18,28 @@ const otpVectors = JSON.parse(readFileSync(join(vectorsDir, 'otp-vectors.json'),
 };
 
 describe('TOTP parity with the PHP server stack (otphp)', () => {
-    it('reproduces every server-generated vector byte-identically', () => {
+    it('reproduces every server-generated vector byte-identically', async () => {
         expect(otpVectors.totp.length).toBeGreaterThan(100);
+        const pending: Promise<void>[] = [];
         for (const vector of otpVectors.totp) {
-            const promise = computeTotp(vector.secret, {
-                at: vector.at,
-                digits: vector.digits,
-                period: vector.period,
-                algorithm: vector.algorithm,
-            });
-            // Collect synchronously so a mismatch names its vector.
-            promise.then((code) => {
-                if (code !== vector.code) {
-                    throw new Error(
-                        `TOTP mismatch: secret=${vector.secret.slice(0, 8)}… alg=${vector.algorithm} ` +
-                            `digits=${vector.digits} period=${vector.period} t=${vector.at}: got ${code}, want ${vector.code}`,
-                    );
-                }
-            });
+            pending.push(
+                computeTotp(vector.secret, {
+                    at: vector.at,
+                    digits: vector.digits,
+                    period: vector.period,
+                    algorithm: vector.algorithm,
+                }).then((code) => {
+                    // Name the vector on mismatch.
+                    if (code !== vector.code) {
+                        throw new Error(
+                            `TOTP mismatch: secret=${vector.secret.slice(0, 8)}… alg=${vector.algorithm} ` +
+                                `digits=${vector.digits} period=${vector.period} t=${vector.at}: got ${code}, want ${vector.code}`,
+                        );
+                    }
+                }),
+            );
         }
+        await Promise.all(pending);
     });
 
     it('matches the RFC 6238 SHA1/SHA256/SHA512 known answers', async () => {

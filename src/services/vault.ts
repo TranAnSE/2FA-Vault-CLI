@@ -88,11 +88,17 @@ export async function ensureKey(options: EnsureKeyOptions = {}, deps: VaultDeps 
             cached = null;
         }
         if (cached) {
-            const bytes = base64ToBytes(cached.keyB64);
-            if (await verifyTestValue(testValue, await importAesKey(bytes))) {
-                keyBytes = bytes;
-            } else {
-                // Stale key (password rotated since caching): purge before prompting.
+            try {
+                const bytes = base64ToBytes(cached.keyB64);
+                if (await verifyTestValue(testValue, await importAesKey(bytes))) {
+                    keyBytes = bytes;
+                } else {
+                    // Stale key (password rotated since caching): purge before prompting.
+                    await keychain.removeDerivedKey(creds.host, salt).catch(() => {});
+                }
+            } catch {
+                // Corrupted entry (bad base64, wrong key length): purge and
+                // fall through to a fresh unlock — never a crash.
                 await keychain.removeDerivedKey(creds.host, salt).catch(() => {});
             }
         }
@@ -188,7 +194,8 @@ export async function rememberKey(unlocked: UnlockedKey, rememberHours?: number)
 export function parseRememberHours(value?: string | boolean | number): number | undefined {
     if (value === undefined || value === false) return undefined;
     if (value === true) return DEFAULT_REMEMBER_HOURS;
-    const n = typeof value === 'number' ? value : Number.parseFloat(value);
+    // Number() rejects trailing garbage ('5abc') that parseFloat would accept.
+    const n = typeof value === 'number' ? value : Number(value);
     if (!Number.isFinite(n) || n <= 0) {
         throw new CliError(`Invalid --remember value '${value}' — pass a positive number of hours.`);
     }
@@ -203,6 +210,11 @@ export async function fetchEncryptedAccounts(deps: VaultDeps = {}): Promise<Encr
     const apiGetDep = deps.apiGet ?? apiGet;
     const body = (await apiGetDep('/twofaccounts/encrypted')) as EncryptedAccountListResponse | null;
     return body?.data ?? [];
+}
+
+/** Look up one account in the encrypted list — null when it is not E2EE. */
+export async function findEncryptedAccount(id: number, deps: VaultDeps = {}): Promise<EncryptedAccount | null> {
+    return (await fetchEncryptedAccounts(deps)).find((a) => a.id === id) ?? null;
 }
 
 /**
@@ -239,6 +251,10 @@ export async function localOtp(account: EncryptedAccount, keyBytes: Uint8Array, 
     const digits = account.digits ?? 6;
     const algorithm = account.algorithm ?? 'sha1';
 
+    if (account.period !== undefined && account.period !== null && account.period <= 0) {
+        throw new CliError(`Account ${account.id} has an invalid TOTP period: ${account.period}.`);
+    }
+
     switch (account.otp_type) {
         case 'hotp': {
             const counter = typeof account.counter === 'number' ? account.counter : 0;
@@ -247,8 +263,13 @@ export async function localOtp(account: EncryptedAccount, keyBytes: Uint8Array, 
         case 'steamtotp':
             return computeSteam(secret);
         case 'totp':
-        default:
             return computeTotp(secret, { digits, period: account.period ?? 30, algorithm });
+        default:
+            // Fail closed: an unknown otp_type must not silently fall through
+            // to TOTP and print a wrong code.
+            throw new CliError(
+                `Account ${account.id} has unsupported otp_type "${account.otp_type ?? 'unknown'}".`,
+            );
     }
 }
 

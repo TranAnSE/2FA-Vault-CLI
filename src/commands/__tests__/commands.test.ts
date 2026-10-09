@@ -111,13 +111,10 @@ test('findUniqueAccount handles accounts with a null service', async () => {
 });
 
 test('the E2EE fast-fail path is reachable via the encrypted endpoint', async () => {
-    // findUniqueAccount itself only queries the index; the E2EE check is a
-    // separate call to /twofaccounts/encrypted. Verify the mock returns the
-    // encrypted id set so assertNotEncrypted (in get.ts) can act on it.
-    const encryptedModule = await import('../get.js');
-    // The encrypted list contains id 3 (AWS). findUniqueAccount('aws') returns
-    // id 3, which the get command would then reject. We assert the data shape
-    // the command depends on rather than the command's internal wiring.
+    // findUniqueAccount itself only queries the index; the E2EE routing is a
+    // separate /twofaccounts/encrypted lookup (the mock's list contains id 3,
+    // AWS). We assert the data shape the command depends on rather than the
+    // command's internal wiring.
     apiGetMock.mockClear();
     await findUniqueAccount('aws');
     // The command first hits the index endpoint.

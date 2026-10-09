@@ -83,15 +83,6 @@ export function base32Decode(encoded: string): Uint8Array {
     return new Uint8Array(output);
 }
 
-/** Encode bytes as standard base64 (Steam's secret format, `TwoFAccount.php:535`). */
-export function bytesToBase64(bytes: Uint8Array): string {
-    let binary = '';
-    for (let i = 0; i < bytes.length; i++) {
-        binary += String.fromCharCode(bytes[i]);
-    }
-    return btoa(binary);
-}
-
 /** Convert a counter to 8 big-endian bytes (mirrors `offline-totp.js:252-259`). */
 function intToBytes(num: number): Uint8Array {
     const bytes = new Uint8Array(8);

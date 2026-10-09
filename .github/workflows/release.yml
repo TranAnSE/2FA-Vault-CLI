@@ -58,7 +58,7 @@ jobs:
         # binary. Tests run on the build host before cross-compilation.
         run: bun run test
 
-      - name: Build binary (${ matrix.target }})
+      - name: Build binary (${{ matrix.target }})
         run: bun build src/cli.ts --compile --target=${{ matrix.target }} --outfile dist/${{ matrix.artifact }}
 
       - name: Smoke test (unix)

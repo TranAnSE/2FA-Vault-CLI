@@ -12,6 +12,13 @@ name: Crypto runtime gate
 
 on:
   workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'src/services/crypto.ts'
+      - 'src/services/otp.ts'
+      - 'src/fixtures/**'
+      - '.github/workflows/crypto-gate.yml'
 
 permissions:
   contents: read

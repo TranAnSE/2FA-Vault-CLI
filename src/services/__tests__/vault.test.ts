@@ -233,6 +233,21 @@ test('ensureKey purges a stale cached key that fails the cheap verify', async ()
     expect(state.keytarStore.has(keychain.derivedKeyAccount(TEST_HOST, SALT_B64))).toBe(false);
 }, 30_000);
 
+test('ensureKey degrades to a fresh unlock on a corrupted cache entry', async () => {
+    await keychain.storeDerivedKey({
+        host: TEST_HOST,
+        salt: SALT_B64,
+        keyB64: '!!!not-base64!!!',
+        derivedAt: Date.now(),
+        ttlMs: 3_600_000,
+    });
+    prompts = [VAULT_PASSWORD];
+    const key = await vault.ensureKey({}, deps());
+    expect(toHex(key.keyBytes)).toBe(toHex(VAULT_KEY));
+    // The corrupted entry was purged instead of crashing the unlock path.
+    expect(state.keytarStore.has(keychain.derivedKeyAccount(TEST_HOST, SALT_B64))).toBe(false);
+}, 30_000);
+
 test('ensureKey re-prompts once on a wrong password, then succeeds', async () => {
     prompts = ['wrong-pass', VAULT_PASSWORD];
     const key = await vault.ensureKey({}, deps());
@@ -307,6 +322,13 @@ test('localOtp computes Steam OTP for steamtotp accounts', async () => {
     const code = await vault.localOtp(account as never, VAULT_KEY, deps());
     const expected = await otp.computeSteam(SECRET_PLAIN);
     expect(code).toBe(expected);
+});
+
+test('localOtp fails closed on an unsupported otp_type (never falls back to TOTP)', async () => {
+    const account = { ...baseAccount, otp_type: 'steamhotp' };
+    let caught: unknown;
+    await vault.localOtp(account as never, VAULT_KEY, deps()).catch((e) => (caught = e));
+    expect((caught as CliErrorInstance).message).toContain('unsupported otp_type');
 });
 
 test('localOtp syncs the HOTP counter after generating', async () => {

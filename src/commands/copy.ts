@@ -14,7 +14,7 @@ import { copyToClipboard, clipboardBackendLabel } from '../services/clipboard.js
 import {
     ensureKey,
     parseRememberHours,
-    fetchEncryptedAccounts,
+    findEncryptedAccount,
     localOtp,
 } from '../services/vault.js';
 
@@ -30,7 +30,7 @@ export const copyCommand = new Command('copy')
         const account = await findUniqueAccount(service);
         const rememberHours = parseRememberHours(opts.remember);
 
-        const encrypted = (await fetchEncryptedAccounts()).find((a) => a.id === account.id);
+        const encrypted = await findEncryptedAccount(account.id);
         let password: string;
         if (encrypted) {
             const key = await ensureKey({ rememberHours });

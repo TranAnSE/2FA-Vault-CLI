@@ -30,7 +30,9 @@ jobs:
           bun-version: latest
 
       - name: Install dependencies
-        run: bun install --frozen-lockfile      - name: Full test suite (includes argon2/AES/OTP parity fixtures)
+        run: bun install --frozen-lockfile
+
+      - name: Full test suite (includes argon2/AES/OTP parity fixtures)
         run: bun test
 
       - name: Compile CLI + runtime probe for the native target

@@ -39,6 +39,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `2fav login` prompt logic shared with the vault unlock prompt (muted echo on
   TTY, piped-stdin fallback).
 
+### Fixed
+
+- `get --watch` without `--remember` re-prompted the master password at every
+  TOTP period and hit `/encryption/info` each iteration — the key is now
+  derived once and the watch loop is fully offline.
+- A corrupted keychain entry no longer crashes the unlock path; it is purged
+  and the flow degrades to a fresh password prompt.
+- An account with an unrecognized `otp_type` fails closed with a named error
+  instead of silently computing a wrong TOTP.
+- `list` degrades to a glyph-less listing when the E2EE endpoint fails instead
+  of hard-failing.
+- One-shot `get`/`copy` scrub the derived key bytes after use.
+
+### CI
+
+- The release workflow now consumes the crypto runtime gate as a required job —
+  a tag cannot ship without the executed-binary parity proof.
+- `bun run typecheck` (now clean repo-wide) gates both the crypto gate and the
+  release build.
+
 ## [0.2.0] - 2026-08-08
 
 ### Added

@@ -118,5 +118,19 @@ test('the E2EE fast-fail path is reachable via the encrypted endpoint', async ()
     apiGetMock.mockClear();
     await findUniqueAccount('aws');
     // The command first hits the index endpoint.
-    expect(apiGetMock).toHaveBeenCalledWith('/twofaccounts?withOtp=0');
+    expect(apiGetMock).toHaveBeenCalledWith('/twofaccounts');
+});
+
+test('findUniqueAccount parses the bare-array wire shape the backend sends', async () => {
+    // The real GET /twofaccounts returns a bare JSON array (ResourceCollection
+    // without pagination) — not a {data} wrapper. Regression for the CLI
+    // returning "No accounts found" against a real server.
+    apiGetMock.mockImplementationOnce(async (path: string) => {
+        if (path.startsWith('/twofaccounts') && !path.includes('/encrypted') && !path.includes('/otp')) {
+            return [{ id: 7, service: 'BareArraySvc', account: 'bare@vault.test', otp_type: 'totp' }];
+        }
+        return null;
+    });
+    const acc = await findUniqueAccount('BareArraySvc');
+    expect(acc.id).toBe(7);
 });

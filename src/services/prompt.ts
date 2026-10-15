@@ -15,6 +15,15 @@ import { CliError } from './api.js';
  */
 export function promptHidden(label: string): Promise<string> {
     if (!process.stdin.isTTY) {
+        // Stdin already exhausted (a second prompt after a one-line pipe —
+        // e.g. the wrong-password retry): resolve empty immediately instead
+        // of waiting on an 'end' event that already fired, which would hang
+        // the process forever. promptHiddenRequired turns the empty value
+        // into a clean CliError.
+        if (process.stdin.readableEnded) {
+            return Promise.resolve('');
+        }
+
         // Non-interactive: read the first line of piped input.
         return new Promise<string>((resolve, reject) => {
             let data = '';

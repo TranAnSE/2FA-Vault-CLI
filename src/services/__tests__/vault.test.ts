@@ -177,6 +177,15 @@ async function cacheTheVaultKey(ttlMs = 8 * 3_600_000): Promise<void> {
 
 // ---- ensureKey ----
 
+test('fetchEncryptedAccounts accepts the bare-array wire shape', async () => {
+    // GET /twofaccounts/encrypted returns a bare JSON array on the wire.
+    const rows = await vault.fetchEncryptedAccounts({
+        apiGet: async () => [baseAccount],
+    });
+    expect(rows).toHaveLength(1);
+    expect(rows[0]?.id).toBe(baseAccount.id);
+});
+
 test('ensureKey performs a fresh unlock: prompt → derive → verify → attest once', async () => {
     prompts = [VAULT_PASSWORD];
     const key = await vault.ensureKey({}, deps());

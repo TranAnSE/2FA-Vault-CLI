@@ -63,4 +63,24 @@ function fail(message: string, code = 1): never {
     process.exit(code);
 }
 
-await run(process.argv);
+/**
+ * Strip the two non-user argv tokens Bun always prepends, so commander's
+ * `from: 'user'` parse receives only the real arguments.
+ *
+ * `bun run src/cli.ts` yields [bun, <script>, ...args]; a `--compile`d
+ * standalone yields ["bun", "<virtual-root>/exe", ...args] (verified on
+ * Windows and Linux — the first token is the literal string "bun" and the
+ * second is the executable's virtual path). Passing either shape through
+ * made commander treat "bun" as the command ("unknown command 'bun'");
+ * `--version` masked it because program-level options are handled before
+ * command resolution, which is why flag-only CI smoke tests stayed green.
+ */
+export function toUserArgs(argv: string[]): string[] {
+    return argv.slice(2);
+}
+
+// Only execute when this file is the process entry (direct run or the
+// compiled binary) — tests import toUserArgs and must not trigger a parse.
+if (import.meta.main) {
+    await run(toUserArgs(process.argv));
+}

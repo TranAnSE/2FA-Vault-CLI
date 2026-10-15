@@ -36,14 +36,26 @@ export interface Account {
 }
 
 /**
- * Response envelope for `GET /api/v1/twofaccounts`.
+ * Response envelope for `GET /api/v1/twofaccounts` (and `/encrypted`).
  *
- * The backend returns a Laravel `ResourceCollection`, which wraps the array of
- * accounts under a top-level `data` key. We keep `data` optional so a bare
- * array response is also tolerated defensively.
+ * The backend returns a bare JSON array on the wire (a Laravel
+ * ResourceCollection serialized without pagination). A `{data: [...]}`
+ * wrapper is tolerated defensively for forward compatibility.
  */
 export interface AccountListResponse {
     data?: Account[];
+}
+
+/**
+ * Normalize an accounts response into the row array, accepting the bare
+ * array the backend actually sends as well as a `{data}` wrapper.
+ */
+export function toAccountRows<T>(body: unknown): T[] {
+    if (Array.isArray(body)) {
+        return body as T[];
+    }
+
+    return (body as { data?: T[] } | null)?.data ?? [];
 }
 
 /**

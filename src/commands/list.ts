@@ -10,15 +10,19 @@
 import { Command } from 'commander';
 import { apiGet, CliError } from '../services/api.js';
 import { fetchEncryptedAccounts } from '../services/vault.js';
-import type { Account, AccountListResponse } from '../types.js';
+import { toAccountRows } from '../types.js';
+import type { Account } from '../types.js';
 
 export const listCommand = new Command('list')
     .description('List your 2FA accounts (service — account)')
     .option('--filter <text>', 'Case-insensitive substring filter on service or account')
     .option('--search <text>', 'Alias for --filter')
     .action(async (opts: { filter?: string; search?: string }) => {
-        const body = await apiGet<AccountListResponse>('/twofaccounts?withOtp=0');
-        const accounts = body?.data ?? [];
+        // No withOtp param: the server generates OTPs on the mere PRESENCE
+        // of the parameter (even withOtp=0), which 400s for E2EE accounts
+        // whose envelope is not a base32 secret.
+        const body = await apiGet<unknown>('/twofaccounts');
+        const accounts = toAccountRows<Account>(body);
         // The E2EE marker is a nice-to-have: if the encrypted endpoint fails
         // (offline instance, transient error, non-E2EE deployments without
         // the route), degrade to a glyph-less listing instead of failing.

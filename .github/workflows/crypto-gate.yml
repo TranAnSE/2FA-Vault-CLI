@@ -54,6 +54,22 @@ jobs:
       - name: Execute compiled binary (--version)
         run: ./dist/2fav --version
 
+      - name: Execute compiled binary with a positional command
+        # --version alone cannot catch argv-shape bugs: program-level options
+        # resolve before command matching. A positional command must route to
+        # the real handler (a clean "Not logged in" CliError) — NOT
+        # commander's "unknown command" for a leaked Bun argv token.
+        run: |
+          set +e
+          out=$(./dist/2fav list 2>&1)
+          code=$?
+          set -e
+          echo "$out"
+          if [ $code -eq 0 ] || ! echo "$out" | grep -q 'Not logged in'; then
+            echo "::error::positional command did not route to the real handler (argv shape bug?)"
+            exit 1
+          fi
+
       - name: Execute compiled deriveKey probe against committed parity vector
         run: |
           # First browser-captured argon2_raw vector from src/fixtures/parity-vectors.json

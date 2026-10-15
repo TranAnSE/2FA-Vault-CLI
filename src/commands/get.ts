@@ -26,7 +26,8 @@ import {
     localOtp,
     localPeriodRemaining,
 } from '../services/vault.js';
-import type { Account, AccountListResponse, OtpResponse, EncryptedAccount } from '../types.js';
+import { toAccountRows } from '../types.js';
+import type { Account, OtpResponse, EncryptedAccount } from '../types.js';
 
 interface GetOptions {
     watch?: boolean;
@@ -161,8 +162,9 @@ function sleep(ms: number): Promise<void> {
  * ambiguous match.
  */
 export async function findUniqueAccount(query: string): Promise<Account> {
-    const body = await apiGet<AccountListResponse>('/twofaccounts?withOtp=0');
-    const accounts = body?.data ?? [];
+    // No withOtp param — see list.ts (server-side has('withOtp') quirk).
+    const body = await apiGet<unknown>('/twofaccounts');
+    const accounts = toAccountRows<Account>(body);
     const needle = query.trim().toLowerCase();
 
     const matches = accounts.filter((a) => {

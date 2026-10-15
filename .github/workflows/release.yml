@@ -86,10 +86,28 @@ jobs:
         run: |
           chmod +x dist/${{ matrix.artifact }}
           ./dist/${{ matrix.artifact }} --version
+          # A positional command must route to the real handler (clean
+          # "Not logged in" CliError), not a leaked-argv "unknown command".
+          out=$(./dist/${{ matrix.artifact }} list 2>&1); code=$?
+          echo "$out"
+          if [ $code -eq 0 ] || ! echo "$out" | grep -q 'Not logged in'; then
+            echo "::error::positional command did not route (argv shape bug?)"
+            exit 1
+          fi
 
       - name: Smoke test (windows)
         if: runner.os == 'Windows' && matrix.smoke != false
-        run: ./dist/${{ matrix.artifact }} --version
+        run: |
+          ./dist/${{ matrix.artifact }} --version
+          # A positional command must route to the real handler (clean
+          # "Not logged in" CliError), not a leaked-argv "unknown command".
+          $out = ./dist/${{ matrix.artifact }} list 2>&1 | Out-String
+          $code = $LASTEXITCODE
+          Write-Output $out
+          if ($code -eq 0 -or -not $out.Contains('Not logged in')) {
+            Write-Error "positional command did not route (argv shape bug?)"
+            exit 1
+          }
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4

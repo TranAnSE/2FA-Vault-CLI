@@ -20,7 +20,8 @@ import { promptHiddenRequired } from './prompt.js';
 import { deriveKey, importAesKey, decryptSecret, verifyTestValue, bytesToBase64, base64ToBytes } from './crypto.js';
 import { computeTotp, computeHotp, computeSteam, getTimeRemaining } from './otp.js';
 import * as keychain from './keychain.js';
-import type { EncryptedAccount, EncryptedAccountListResponse } from '../types.js';
+import { toAccountRows } from '../types.js';
+import type { EncryptedAccount } from '../types.js';
 
 /** Default TTL for `--remember` (hours). */
 export const DEFAULT_REMEMBER_HOURS = 8;
@@ -208,8 +209,9 @@ export function parseRememberHours(value?: string | boolean | number): number | 
  */
 export async function fetchEncryptedAccounts(deps: VaultDeps = {}): Promise<EncryptedAccount[]> {
     const apiGetDep = deps.apiGet ?? apiGet;
-    const body = (await apiGetDep('/twofaccounts/encrypted')) as EncryptedAccountListResponse | null;
-    return body?.data ?? [];
+    const body = await apiGetDep('/twofaccounts/encrypted');
+
+    return toAccountRows<EncryptedAccount>(body);
 }
 
 /** Look up one account in the encrypted list — null when it is not E2EE. */
@@ -298,8 +300,7 @@ async function hotpWithCounterSync(
     }
 
     // One recovery cycle: adopt the server's counter.
-    const body = (await apiGetDep('/twofaccounts/encrypted')) as EncryptedAccountListResponse | null;
-    const fresh = (body?.data ?? []).find((a) => a.id === id);
+    const fresh = toAccountRows<EncryptedAccount>(await apiGetDep('/twofaccounts/encrypted')).find((a) => a.id === id);
     const freshCounter = typeof fresh?.counter === 'number' ? fresh.counter : null;
     if (freshCounter === null) {
         throw new CliError(`HOTP counter sync failed: account ${id} disappeared from the encrypted list.`);
